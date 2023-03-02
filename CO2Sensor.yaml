@@ -1,8 +1,5 @@
-api:
-  port: 6053
-
 esphome:
-  name: co2sensor
+  name: co2sensor-etml
 
 esp32:
   board: lolin32
@@ -26,6 +23,10 @@ font:
     id: font_small
     size: 12
 
+  - file: 'fonts/PragmataPro.ttf'
+    id: font_tiny
+    size: 8
+
 globals:
   - id: fast_poll_on
     type: bool
@@ -39,27 +40,51 @@ display:
   - platform: ssd1306_i2c
     model: "SSD1306 128x64"
     address: 0x3C
-    lambda: |-
-      if (id(co2).has_state()) {
-        it.printf(0, 17, id(font1), TextAlign::BASELINE_LEFT , "%.0f ppm", id(co2).state);
-      }
+    pages:
+      - lambda: |-
+          if (id(co2).has_state()) {
+            it.printf(0, 17, id(font1), TextAlign::BASELINE_LEFT , "%.0f ppm", id(co2).state);
+          }
 
-      if (id(temperature).has_state()) {
-        it.printf(0, 35, id(font1), TextAlign::BASELINE_LEFT , "%.1f°C", id(temperature).state);
-      }
+          if (id(temperature).has_state()) {
+            it.printf(0, 35, id(font1), TextAlign::BASELINE_LEFT , "%.1f°C", id(temperature).state);
+          }
 
-      if (id(humidity).has_state()) {
-        it.printf(0, 52, id(font1), TextAlign::BASELINE_LEFT , "%.2f%%", id(humidity).state);
-      }
+          if (id(humidity).has_state()) {
+            it.printf(0, 52, id(font1), TextAlign::BASELINE_LEFT , "%.2f%%", id(humidity).state);
+          }
 
-      if (id(ip_address).has_state()) {
-        it.printf(127, 64, id(font_small), TextAlign::BASELINE_RIGHT, "%s", id(ip_address).state.c_str());
-      } else {
-        it.print(127, 64, id(font_small), TextAlign::BASELINE_RIGHT, "No WiFi");
-      }
+          if (id(ip_address).has_state()) {
+            it.printf(127, 64, id(font_small), TextAlign::BASELINE_RIGHT, "%s", id(ip_address).state.c_str());
+          } else {
+            it.print(127, 64, id(font_small), TextAlign::BASELINE_RIGHT, "No WiFi");
+          }
 
-      it.printf(127, 13, id(font_small), TextAlign::BASELINE_RIGHT, "%s", id(fast_poll_on) ? "ON" : "OFF");
-      //it.printf(127, 26, id(font_small), TextAlign::BASELINE_RIGHT, "%d secs", id(sdc40).get_update_interval() / 1000);
+          it.printf(127, 13, id(font_small), TextAlign::BASELINE_RIGHT, "%s", id(fast_poll_on) ? "ON" : "OFF");
+          //it.printf(127, 26, id(font_small), TextAlign::BASELINE_RIGHT, "%d secs", id(sdc40).get_update_interval() / 1000);
+      - lambda: |-
+          it.print(47, 1, id(font_tiny), TextAlign::TOP_RIGHT, "2000 ppm");
+          it.print(47, 63, id(font_tiny), TextAlign::BASELINE_RIGHT, "400 ppm");
+
+          if (id(co2).has_state()) {
+            it.printf(23, 31, id(font1), TextAlign::BASELINE_CENTER, "%s", id(co2).state);
+            it.print(23, 33, id(font1), TextAlign::TOP_CENTER, "ppm");
+          } else {
+            it.print(23, 32, id(font1), TextAlign::CENTER, "N/A");
+          }
+
+          it.graph(46, 2, id(co2graph));
+
+graph:
+  - id: co2graph
+    sensor: co2
+    duration: 4h
+    width: 80
+    height: 60
+    x_grid: 30min
+    y_grid: 400
+    min_value: 400
+    max_value: 2000
 
 sensor:
   - platform: scd4x
