@@ -27,11 +27,6 @@ font:
     id: font_tiny
     size: 8
 
-globals:
-  - id: fast_poll_on
-    type: bool
-    initial_value: 'false'
-
 i2c:
   sda: 5
   scl: 4
@@ -40,6 +35,7 @@ display:
   - platform: ssd1306_i2c
     model: "SSD1306 128x64"
     address: 0x3C
+    id: screen
     pages:
       - lambda: |-
           if (id(co2).has_state()) {
@@ -60,7 +56,6 @@ display:
             it.print(127, 64, id(font_small), TextAlign::BASELINE_RIGHT, "No WiFi");
           }
 
-          it.printf(127, 13, id(font_small), TextAlign::BASELINE_RIGHT, "%s", id(fast_poll_on) ? "ON" : "OFF");
           //it.printf(127, 26, id(font_small), TextAlign::BASELINE_RIGHT, "%d secs", id(sdc40).get_update_interval() / 1000);
       - lambda: |-
           it.print(47, 1, id(font_tiny), TextAlign::TOP_RIGHT, "2000 ppm");
@@ -90,7 +85,7 @@ sensor:
   - platform: scd4x
     id: sdc40
     measurement_mode: periodic
-    update_interval: 60s
+    update_interval: 5s
     co2:
       name: "Office CO2"
       id: "co2"
@@ -126,19 +121,7 @@ binary_sensor:
     filters:
       - delayed_on: 10ms
     on_press:
-      then:
-        - lambda: id(sdc40).update();
-    on_click:
-      min_length: 750ms
-      max_length: 5000ms
-      then:
-        - globals.set:
-            id: fast_poll_on
-            value: 'true'
-        - delay: 10min
-        - globals.set:
-            id: fast_poll_on
-            value: 'false'
+      - display.page.show_next: screen
 
 text_sensor:
   - platform: wifi_info
@@ -159,11 +142,3 @@ light:
     id: co2light
     entity_category: diagnostic
 
-interval:
-  - interval: 5s
-    then:
-      - if:
-          condition:
-            lambda: return id(fast_poll_on);
-          then:
-            - component.update: sdc40
