@@ -1,0 +1,144 @@
+api:
+  port: 6053
+
+esphome:
+  name: co2sensor
+
+esp32:
+  board: lolin32
+  framework:
+    type: arduino
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+ota:
+  safe_mode: true
+  password: !secret ota_password
+
+font:
+  - file: 'fonts/PragmataPro.ttf'
+    id: font1
+    size: 16
+
+  - file: 'fonts/PragmataPro.ttf'
+    id: font_small
+    size: 12
+
+globals:
+  - id: fast_poll_on
+    type: bool
+    initial_value: 'false'
+
+i2c:
+  sda: 5
+  scl: 4
+
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    lambda: |-
+      if (id(co2).has_state()) {
+        it.printf(0, 17, id(font1), TextAlign::BASELINE_LEFT , "%.0f ppm", id(co2).state);
+      }
+
+      if (id(temperature).has_state()) {
+        it.printf(0, 35, id(font1), TextAlign::BASELINE_LEFT , "%.1f°C", id(temperature).state);
+      }
+
+      if (id(humidity).has_state()) {
+        it.printf(0, 52, id(font1), TextAlign::BASELINE_LEFT , "%.2f%%", id(humidity).state);
+      }
+
+      if (id(ip_address).has_state()) {
+        it.printf(127, 64, id(font_small), TextAlign::BASELINE_RIGHT, "%s", id(ip_address).state.c_str());
+      } else {
+        it.print(127, 64, id(font_small), TextAlign::BASELINE_RIGHT, "No WiFi");
+      }
+
+      it.printf(127, 13, id(font_small), TextAlign::BASELINE_RIGHT, "%s", id(fast_poll_on) ? "ON" : "OFF");
+      //it.printf(127, 26, id(font_small), TextAlign::BASELINE_RIGHT, "%d secs", id(sdc40).get_update_interval() / 1000);
+
+sensor:
+  - platform: scd4x
+    id: sdc40
+    measurement_mode: periodic
+    update_interval: 60s
+    co2:
+      name: "Office CO2"
+      id: "co2"
+      on_value:
+        then:
+          - lambda: |-
+              float co2 = std::min(float(1800), x);
+              auto t = (co2-440)/(1800 - 440);
+              auto interpolated = ESPHSVColor(uint8_t((1-t)*96), 255, 32);
+              auto inter_rgb = interpolated.to_rgb();
+
+              auto call = id(co2light).turn_on();
+              call.set_rgb(inter_rgb.red / 255.0, inter_rgb.green / 255.0, inter_rgb.blue / 255.0);
+              call.set_brightness(0.3);
+              call.perform();
+
+    temperature:
+      name: "Office Temperature"
+      id: "temperature"
+    humidity:
+      name: "Office Humidity"
+      id: "humidity"
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO25
+      mode:
+        input: true
+        pulldown: true
+    id: "btn"
+    name: "Breadboard button"
+    filters:
+      - delayed_on: 10ms
+    on_press:
+      then:
+        - lambda: id(sdc40).update();
+    on_click:
+      min_length: 750ms
+      max_length: 5000ms
+      then:
+        - globals.set:
+            id: fast_poll_on
+            value: 'true'
+        - delay: 10min
+        - globals.set:
+            id: fast_poll_on
+            value: 'false'
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: ESP IP Address
+      id: ip_address
+    ssid:
+      name: ESP Connected SSID
+      id: wifi_ssid
+
+light:
+  - platform: neopixelbus
+    type: GRB
+    variant: WS2812
+    pin: GPIO2
+    num_leds: 1
+    name: "CO2 LED"
+    id: co2light
+    entity_category: diagnostic
+
+interval:
+  - interval: 5s
+    then:
+      - if:
+          condition:
+            lambda: return id(fast_poll_on);
+          then:
+            - component.update: sdc40
