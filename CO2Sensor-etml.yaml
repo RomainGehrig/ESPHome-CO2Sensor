@@ -64,7 +64,7 @@ display:
 
           if (id(hourly_graph).state) {
             it.graph(52, 0, id(co2graph));
-            it.print(127, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, "1 heure");
+            it.print(127, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, "2 heures");
           } else {
             it.graph(52, 0, id(co2graph_small));
             it.print(127, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, "20 minutes");
@@ -83,13 +83,13 @@ graph:
     border: true
   - id: co2graph
     sensor: co2
-    duration: 1h
+    duration: 2h
     width: 76
     height: 48
     min_value: 400
     max_value: 2000
     y_grid: 400
-    x_grid: 10min
+    x_grid: 15min
     border: true
 
 sensor:
