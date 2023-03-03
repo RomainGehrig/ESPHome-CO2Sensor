@@ -7,11 +7,14 @@ esp32:
     type: arduino
 
 api:
+  port: 6053
   reboot_timeout: 0s
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  fast_connect: true
+  reboot_timeout: 0s
 
 ota:
   safe_mode: true
