@@ -31,6 +31,12 @@ i2c:
   sda: 5
   scl: 4
 
+switch:
+  - platform: template
+    id: hourly_graph
+    name: "Hourly graph"
+    optimistic: true
+
 display:
   - platform: ssd1306_i2c
     model: "SSD1306 128x64"
@@ -56,15 +62,13 @@ display:
             it.print(0, 64, id(font_tiny), TextAlign::BASELINE_LEFT, "No WiFi");
           }
 
-          it.print(127, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, "20 minutes");
-
-          it.graph(52, 0, id(co2graph_small));
-      - lambda: |-
-          if (id(co2).has_state()) {
-            it.printf(0, 13, id(font_small), TextAlign::BASELINE_LEFT , "%.0f ppm", id(co2).state);
+          if (id(hourly_graph).state) {
+            it.graph(52, 0, id(co2graph));
+            it.print(127, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, "1 heure");
+          } else {
+            it.graph(52, 0, id(co2graph_small));
+            it.print(127, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, "20 minutes");
           }
-          it.graph(52, 0, id(co2graph));
-          it.print(127, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, "1 heure");
 
 graph:
   - id: co2graph_small
@@ -126,7 +130,7 @@ binary_sensor:
     filters:
       - delayed_on: 10ms
     on_click:
-      - display.page.show_next: screen
+      - switch.toggle: hourly_graph
 
 text_sensor:
   - platform: wifi_info
