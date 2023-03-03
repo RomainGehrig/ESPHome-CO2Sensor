@@ -1,8 +1,5 @@
-api:
-  port: 6053
-
 esphome:
-  name: co2sensor
+  name: co2sensor-etml
 
 esp32:
   board: lolin32
@@ -26,46 +23,80 @@ font:
     id: font_small
     size: 12
 
-globals:
-  - id: fast_poll_on
-    type: bool
-    initial_value: 'false'
+  - file: 'fonts/PragmataPro.ttf'
+    id: font_tiny
+    size: 10
 
 i2c:
   sda: 5
   scl: 4
 
+switch:
+  - platform: template
+    id: hourly_graph
+    name: "Hourly graph"
+    optimistic: true
+
 display:
   - platform: ssd1306_i2c
     model: "SSD1306 128x64"
     address: 0x3C
-    lambda: |-
-      if (id(co2).has_state()) {
-        it.printf(0, 17, id(font1), TextAlign::BASELINE_LEFT , "%.0f ppm", id(co2).state);
-      }
+    id: screen
+    pages:
+      - lambda: |-
+          if (id(co2).has_state()) {
+            it.printf(0, 13, id(font_small), TextAlign::BASELINE_LEFT , "%.0f ppm", id(co2).state);
+          }
 
-      if (id(temperature).has_state()) {
-        it.printf(0, 35, id(font1), TextAlign::BASELINE_LEFT , "%.1f°C", id(temperature).state);
-      }
+          if (id(temperature).has_state()) {
+            it.printf(0, 26, id(font_small), TextAlign::BASELINE_LEFT , "%.1f°C", id(temperature).state);
+          }
 
-      if (id(humidity).has_state()) {
-        it.printf(0, 52, id(font1), TextAlign::BASELINE_LEFT , "%.2f%%", id(humidity).state);
-      }
+          if (id(humidity).has_state()) {
+            it.printf(0, 39, id(font_small), TextAlign::BASELINE_LEFT , "%.2f%%", id(humidity).state);
+          }
 
-      if (id(ip_address).has_state()) {
-        it.printf(127, 64, id(font_small), TextAlign::BASELINE_RIGHT, "%s", id(ip_address).state.c_str());
-      } else {
-        it.print(127, 64, id(font_small), TextAlign::BASELINE_RIGHT, "No WiFi");
-      }
+          if (id(ip_address).has_state()) {
+            it.printf(0, 64, id(font_tiny), TextAlign::BASELINE_LEFT, "%s", id(ip_address).state.c_str());
+          } else {
+            it.print(0, 64, id(font_tiny), TextAlign::BASELINE_LEFT, "No WiFi");
+          }
 
-      it.printf(127, 13, id(font_small), TextAlign::BASELINE_RIGHT, "%s", id(fast_poll_on) ? "ON" : "OFF");
-      //it.printf(127, 26, id(font_small), TextAlign::BASELINE_RIGHT, "%d secs", id(sdc40).get_update_interval() / 1000);
+          if (id(hourly_graph).state) {
+            it.graph(52, 0, id(co2graph));
+            it.print(127, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, "1 heure");
+          } else {
+            it.graph(52, 0, id(co2graph_small));
+            it.print(127, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, "20 minutes");
+          }
+
+graph:
+  - id: co2graph_small
+    sensor: co2
+    duration: 20min
+    width: 76
+    height: 48
+    min_value: 400
+    max_value: 2000
+    y_grid: 400
+    x_grid: 5min
+    border: true
+  - id: co2graph
+    sensor: co2
+    duration: 1h
+    width: 76
+    height: 48
+    min_value: 400
+    max_value: 2000
+    y_grid: 400
+    x_grid: 10min
+    border: true
 
 sensor:
   - platform: scd4x
     id: sdc40
     measurement_mode: periodic
-    update_interval: 60s
+    update_interval: 5s
     co2:
       name: "Office CO2"
       id: "co2"
@@ -100,20 +131,8 @@ binary_sensor:
     name: "Breadboard button"
     filters:
       - delayed_on: 10ms
-    on_press:
-      then:
-        - lambda: id(sdc40).update();
     on_click:
-      min_length: 750ms
-      max_length: 5000ms
-      then:
-        - globals.set:
-            id: fast_poll_on
-            value: 'true'
-        - delay: 10min
-        - globals.set:
-            id: fast_poll_on
-            value: 'false'
+      - switch.toggle: hourly_graph
 
 text_sensor:
   - platform: wifi_info
@@ -133,12 +152,3 @@ light:
     name: "CO2 LED"
     id: co2light
     entity_category: diagnostic
-
-interval:
-  - interval: 5s
-    then:
-      - if:
-          condition:
-            lambda: return id(fast_poll_on);
-          then:
-            - component.update: sdc40
