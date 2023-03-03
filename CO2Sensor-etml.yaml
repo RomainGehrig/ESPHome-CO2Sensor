@@ -79,7 +79,8 @@ graph:
     min_value: 400
     max_value: 2000
     y_grid: 400
-    border: false
+    x_grid: 5min
+    border: true
   - id: co2graph
     sensor: co2
     duration: 1h
@@ -88,7 +89,8 @@ graph:
     min_value: 400
     max_value: 2000
     y_grid: 400
-    border: false
+    x_grid: 10min
+    border: true
 
 sensor:
   - platform: scd4x
