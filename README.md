@@ -18,3 +18,18 @@ Hardware:
 
 
 <img src='images/co2_homeassistant.jpg' align="center" width=850> 
+
+
+## Case
+
+Currently designing a printable case to house the components without the breadboard.
+
+Design targets:
+ - Able to hang on the wall
+ - Printable without support
+ - The CO2 sensor (SDC40) gets fresh air and is minimally impacted by the heat of other components
+ - Expensive components must be reusable in other projects: so no gluing and no soldering
+ - Minimal footprint
+
+**V4**
+<img src='images/case_v4.png' align="center" width=850>
