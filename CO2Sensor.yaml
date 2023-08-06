@@ -1,5 +1,5 @@
 esphome:
-  name: co2sensor-etml
+  name: co2sensor
 
 esp32:
   board: lolin32
