@@ -6,11 +6,6 @@ esp32:
   framework:
     type: arduino
 
-globals:
-  - id: fast_poll_on
-    type: bool
-    initial_value: 'false'
-
 api:
   port: 6053
   reboot_timeout: 0s
@@ -47,6 +42,11 @@ switch:
     id: hourly_graph
     name: "Hourly graph"
     optimistic: true
+  - platform: template
+    id: fast_poll_on
+    name: "Fast polling"
+    optimistic: true
+
 
 display:
   - platform: ssd1306_i2c
@@ -75,14 +75,14 @@ display:
 
           if (id(hourly_graph).state) {
             it.graph(52, 0, id(co2graph));
-            it.print(100, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, "2 h");
+            it.print(90, 64, id(font_tiny), TextAlign::BASELINE_CENTER, "2h");
           } else {
             it.graph(52, 0, id(co2graph_small));
-            it.print(100, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, "20 min");
+            it.print(90, 64, id(font_tiny), TextAlign::BASELINE_CENTER, "20 min");
           }
 
-          auto poll_txt = id(fast_poll_on) ? "5s": "60s";
-          it.print(102, 64, id(font_tiny), TextAlign::BASELINE_LEFT, poll_txt);
+          auto poll_txt = id(fast_poll_on).state ? "/5s": "/60s";
+          it.print(128, 64, id(font_tiny), TextAlign::BASELINE_RIGHT, poll_txt);
 
 
 graph:
@@ -140,7 +140,7 @@ interval:
     then:
       - if:
           condition:
-            lambda: return id(fast_poll_on);
+            switch.is_on: fast_poll_on
           then:
             - component.update: sdc40
 
@@ -155,8 +155,16 @@ binary_sensor:
     name: "Breadboard button"
     filters:
       - delayed_on: 10ms
+    on_press:
+      then:
+        - switch.toggle: hourly_graph
     on_click:
-      - switch.toggle: hourly_graph
+      min_length: 750ms
+      max_length: 5000ms
+      then:
+        - switch.turn_on: fast_poll_on
+        - delay: 10min
+        - switch.turn_off: fast_poll_on
 
 text_sensor:
   - platform: wifi_info
